@@ -217,17 +217,16 @@ class Program
             else if (file.Name == "mdat.json")
                 metadata = file;
         }
+        
+        names.Sort(delegate (string x, string y)
+        {
+            var _x = int.Parse(Path.GetFileNameWithoutExtension(x));
+            var _y = int.Parse(Path.GetFileNameWithoutExtension(y));
 
-        if (names.Count > 9)
-            names.Sort(delegate (string x, string y)
-            {
-                var _x = int.Parse(Path.GetFileNameWithoutExtension(x));
-                var _y = int.Parse(Path.GetFileNameWithoutExtension(y));
+            if (_x == _y) return 0;
 
-                if (_x == _y) return 0;
-
-                return _x < _y ? -1 : 1;
-            });
+            return _x < _y ? -1 : 1;
+        });
 
         foreach (string name in names)
         {
