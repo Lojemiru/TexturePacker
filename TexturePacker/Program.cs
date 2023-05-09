@@ -230,8 +230,6 @@ class Program
 
         foreach (string name in names)
         {
-            if (names.Count > 9)
-                Console.WriteLine("ADDING FRAME: " + name);
             frames.Add(Image.Load<Rgba32>(name));
         }
 
