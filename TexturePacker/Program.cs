@@ -6,6 +6,7 @@ using Point = SixLabors.ImageSharp.Point;
 using Rectangle = SixLabors.ImageSharp.Rectangle;
 using QuickType;
 using Newtonsoft.Json;
+using SixLabors.ImageSharp.Memory;
 
 // Full disclosure - no code was directly used, but I poked through these as my learning material:
 // https://blackpawn.com/texts/lightmaps/default.html
@@ -89,6 +90,7 @@ class Program
 
 
     private static readonly List<Sprite> Sprites = new();
+    private static readonly List<Frame> Frames = new();
     private static string _exportJson = "{\"sprites\":{\n";
 
     private const string ENUM_FILE_HEADER = @"
@@ -134,7 +136,7 @@ class Program
         RecursiveAdd(dir);
 
         // Sort list from largest to smallest. I am lying to the computer here to get the largest images FIRST (inverting 1/-1).
-        Sprites.Sort(delegate(Sprite x, Sprite y)
+        Frames.Sort(delegate(Frame x, Frame y)
         {
             // X is smaller
             if (x.Height < y.Height)
@@ -152,17 +154,18 @@ class Program
 
         var enumOutput = "";
 
+        foreach (var frame in Frames)
+        {
+            var node = root.Insert(frame);
+            if (node != null)
+            {
+                frame.Parent.Positions[frame.Index] = new FakeRectangle(node.Bounds.X, node.Bounds.Y, node.Bounds.Width,
+                    node.Bounds.Height);
+            }
+        }
+
         foreach (var sprite in Sprites)
         {
-            for (var i = 0; i < sprite.Metadata.FrameCount; i++)
-            {
-                var frame = sprite.Frames[i];
-                var node = root.Insert(frame);
-                if (node != null)
-                {
-                    sprite.Positions[i] = new FakeRectangle(node.Bounds.X, node.Bounds.Y, node.Bounds.Width, node.Bounds.Height);
-                }
-            }
             _exportJson += sprite + ",\n";
             enumOutput += sprite.Metadata.Name + ",\n";
         }
@@ -214,6 +217,9 @@ class Program
 
             return x < y ? -1 : 1;
         });
+
+        var trueWidth = 0;
+        var trueHeight = 0;
         
         var cropOffsets = new int[names.Count][];
         
@@ -221,6 +227,12 @@ class Program
         {
             var name = names[n];
             var img = Image.Load<Rgba32>(name);
+
+            if (n == 0)
+            {
+                trueWidth = img.Width;
+                trueHeight = img.Height;
+            }
             
             var cropLeft = img.Width;
             var cropRight = 0;
@@ -251,12 +263,19 @@ class Program
 
             frames.Add(img);
             
-            int[] offsets = { cropLeft, cropTop };
-            cropOffsets[n] = offsets;
+            cropOffsets[n] = new[] { cropLeft, cropTop };
         }
 
         if (metadata != null)
-            Sprites.Add(new Sprite(metadata, frames, cropOffsets));
+        {
+            var spr = new Sprite(metadata, trueWidth, trueHeight, cropOffsets);
+            
+            Sprites.Add(spr);
+            for (var i = 0; i < frames.Count; i++)
+            {
+                Frames.Add(new Frame(frames[i], spr, i));
+            }
+        }
 
         foreach (var dir in directory.GetDirectories())
         {
@@ -264,23 +283,38 @@ class Program
         }
     }
 
-    private class Sprite
+    private sealed class Frame
+    {
+        public readonly Image Data;
+        public readonly Sprite Parent;
+        public readonly int Index;
+
+        public int Width => Data.Width;
+        public int Height => Data.Height;
+
+        public Frame(Image data, Sprite parent, int index)
+        {
+            Data = data;
+            Parent = parent;
+            Index = index;
+        }
+    }
+
+    private sealed class Sprite
     {
         public readonly Metadata Metadata;
-        public readonly List<Image> Frames;
         public readonly FakeRectangle[] Positions;
-        public readonly int Width;
-        public readonly int Height;
-        private readonly int[][] _cropOffsets;
+        private readonly int _width;
+        private readonly int _height;
+        private readonly int[][] CropOffsets;
 
-        public Sprite(FileSystemInfo metadata, List<Image> frames, int[][] cropOffsets)
+        public Sprite(FileSystemInfo metadata, int width, int height, int[][] cropOffsets)
         {
             Metadata = Metadata.FromJson(File.ReadAllText(metadata.FullName));
-            Frames = frames;
             Positions = new FakeRectangle[Metadata.FrameCount];
-            Width = frames[0].Width;
-            Height = frames[0].Height;
-            _cropOffsets = cropOffsets;
+            _width = width;
+            _height = height;
+            CropOffsets = cropOffsets;
         }
 
         public override string ToString()
@@ -299,16 +333,16 @@ class Program
                 OriginY = Metadata.Origin[1],
                 AttachPoints = Metadata.AttachPoints,
                 Positions = Positions,
-                Width = Width,
-                Height = Height,
-                CropOffsets = _cropOffsets
+                Width = _width,
+                Height = _height,
+                CropOffsets = CropOffsets
             };
 
             return md;
         }
     }
 
-    private class Node
+    private sealed class Node
     {
         private Node? _left;
         private Node? _right;
@@ -320,12 +354,14 @@ class Program
             Bounds = bounds;
         }
 
-        public Node? Insert(Image sprite)
+        public Node? Insert(Frame frame)
         {
+            var sprite = frame.Data;
+            
             // If we already have an image, or the image doesn't fit...
             if (_sprite != null || !Fits(sprite))
                 // ...attempt to insert right, then attempt to insert left, and finally return null if neither of those worked.
-                return _right?.Insert(sprite) ?? _left?.Insert(sprite);
+                return _right?.Insert(frame) ?? _left?.Insert(frame);
             
             // Otherwise, the image fits so we should take it and try to create more space for other images.
             _sprite = sprite;
@@ -383,7 +419,7 @@ namespace QuickType
     using Newtonsoft.Json;
     using Newtonsoft.Json.Converters;
 
-    public class Metadata
+    public sealed class Metadata
     {
         [JsonProperty("frameCount")]
         public int FrameCount { get; set; }
