@@ -236,12 +236,12 @@ class Program
                     
                     if (i < cropLeft)
                         cropLeft = i;
-                    else if (i > cropRight)
+                    if (i > cropRight)
                         cropRight = i;
 
                     if (j < cropTop)
                         cropTop = j;
-                    else if (j > cropBottom)
+                    if (j > cropBottom)
                         cropBottom = j;
                 }
             }
