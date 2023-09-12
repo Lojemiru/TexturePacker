@@ -6,13 +6,14 @@ using Point = SixLabors.ImageSharp.Point;
 using Rectangle = SixLabors.ImageSharp.Rectangle;
 using QuickType;
 using Newtonsoft.Json;
-using SixLabors.ImageSharp.Memory;
 
 // Full disclosure - no code was directly used, but I poked through these as my learning material:
 // https://blackpawn.com/texts/lightmaps/default.html
 // https://gist.github.com/ttalexander2/88a40eec0fd0ea5b31cc2453d6bbddad
 
 // TODO: Duplicate removal
+// TODO: Either make sprite padding actually extrude color, or only pad on one side per axis to save space.
+
 class Program
 {
     static async Task<int> Main(string[] args)
@@ -159,8 +160,8 @@ class Program
             var node = root.Insert(frame);
             if (node != null)
             {
-                frame.Parent.Positions[frame.Index] = new FakeRectangle(node.Bounds.X, node.Bounds.Y, node.Bounds.Width,
-                    node.Bounds.Height);
+                frame.Parent.Positions[frame.Index] = new FakeRectangle(node.Bounds.X + 1, node.Bounds.Y + 1, node.Bounds.Width - 2,
+                    node.Bounds.Height - 2);
             }
         }
 
@@ -259,7 +260,7 @@ class Program
             }
             
             if (cropLeft != 0 || cropRight != img.Width || cropTop != 0 || cropBottom != img.Height)
-                img.Mutate(x => x.Crop(new Rectangle(cropLeft, cropTop, 1 + cropRight - cropLeft, 1 + cropBottom - cropTop)));
+                img.Mutate(x => x.Crop(new Rectangle(cropLeft, cropTop, 1 + cropRight - cropLeft, 1 + cropBottom - cropTop)).Pad(img.Width + 2, img.Height + 2));
 
             frames.Add(img);
             
