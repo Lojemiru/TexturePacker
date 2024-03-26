@@ -392,9 +392,9 @@ class Program
             _right?.Render(canvas);
         }
 
-        private bool Fits(IImageInfo sprite)
+        private bool Fits(Image sprite)
         {
-            var bounds = sprite.Bounds();
+            var bounds = sprite.Bounds;
             bounds.X = Bounds.X;
             bounds.Y = Bounds.Y;
             return Bounds.Contains(bounds);
