@@ -20,6 +20,143 @@ public static class Packer
 
 ";
 
+    public static void Pack(DirectoryInfo dir, int size, DirectoryInfo outDir, string name)
+    {
+        LoadSprites(dir);
+        
+        /*
+        // Sort list from largest to smallest. I am lying to the computer here to get the largest images FIRST (inverting 1/-1).
+        Frames.Sort(delegate(Frame x, Frame y)
+        {
+            // X is smaller
+            if (x.Height < y.Height)
+                return 1;
+
+            // Y is smaller
+            if (y.Height < x.Height)
+                return -1;
+
+            // Both are equal
+            return 0;
+        });
+        */
+        
+        // Sort list from largest to smallest. I am lying to the computer here to get the largest images FIRST (inverting 1/-1).
+        Images.Sort(delegate(Image<Rgba32> x, Image<Rgba32> y)
+        {
+            // X is smaller
+            if (x.Height < y.Height)
+                return 1;
+
+            // Y is smaller
+            if (y.Height < x.Height)
+                return -1;
+
+            // Both are equal
+            return 0;
+        });
+        
+        Node root = new(new Rectangle(0, 0, size, size));
+
+        foreach (var image in Images)
+        {
+            var node = root.Insert(image);
+            if (node != null)
+            {
+                //Console.WriteLine(node.Bounds);
+                // uhhhhhhh record bounds???
+            }
+        }
+        
+        Image<Rgba32> canvas = new(size, size);
+        
+        root.Render(canvas);
+        
+        canvas.SaveAsPng(outDir + "/" + name + ".png");
+    }
+
+    private static readonly List<Image<Rgba32>> Images = new();
+
+    public static void LoadSprites(DirectoryInfo directory)
+    {
+        foreach (var file in directory.GetFiles())
+        {
+            if (file.Extension == ".aseprite")
+            {
+                var ase = new Aseprite(file.FullName);
+
+                var first = true;
+
+                foreach (var frame in ase.Frames)
+                {
+                    List<Image> frames = new();
+                    
+                    foreach (var cel in frame.Cels)
+                    {
+                        var layer = cel.Layer;
+
+                        // Origin: only grab if on first frame.
+                        if (first && layer.Name == "_origin")
+                        {
+                            first = false;
+                            // TODO: get origin
+                        }
+                        // Attach points: grab every frame.
+                        else if (layer.Name.StartsWith("_attach_"))
+                        {
+                            // TODO: Get attach point data
+                        }
+                        // Generic layer: always grab.
+                        else
+                        {
+
+                            var img = Image.LoadPixelData<Rgba32>(cel.Bytes, cel.Width, cel.Height);
+                            
+                            //Console.WriteLine(img.Width + ", " + img.Height);
+                            
+                            var cropLeft = img.Width;
+                            var cropRight = 0;
+                            var cropTop = img.Height;
+                            var cropBottom = 0;
+
+                            for (var i = 0; i < img.Width; i++)
+                            {
+                                for (var j = 0; j < img.Height; j++)
+                                {
+                                    if (img[i, j].A <= 0) 
+                                        continue;
+                    
+                                    if (i < cropLeft)
+                                        cropLeft = i;
+                                    if (i > cropRight)
+                                        cropRight = i;
+
+                                    if (j < cropTop)
+                                        cropTop = j;
+                                    if (j > cropBottom)
+                                        cropBottom = j;
+                                }
+                            }
+
+                            if (cropLeft != 0 || cropRight != img.Width || cropTop != 0 || cropBottom != img.Height)
+                                img.Mutate(x => x.Crop(new Rectangle(cropLeft, cropTop, 
+                                    1 + cropRight - cropLeft, 1 + cropBottom - cropTop))
+                                    .Pad(img.Width + 2, img.Height + 2));
+                            
+                            //frames.Add(img);
+                            Images.Add(img);
+                        }
+                    }
+                    
+                    
+                }
+            }
+        }
+        
+        // TODO: Generate most metadata
+    }
+
+    /*
     public static void Enum(DirectoryInfo dir, FileSystemInfo output, string name, string nameSpace)
     {
         var enumOut = ENUM_FILE_HEADER + "namespace " + nameSpace + ";\n\npublic enum " + name + " {";
@@ -200,4 +337,6 @@ public static class Packer
             RecursiveAdd(dir);
         }
     }
+    
+    */
 }

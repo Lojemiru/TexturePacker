@@ -1,4 +1,5 @@
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.Processing;
 
 namespace TexturePacker.Models;
@@ -16,13 +17,14 @@ internal sealed class Node
     }
 
     public Node? Insert(Frame frame)
+        => Insert(frame.Data);
+    
+    public Node? Insert(Image sprite)
     {
-        var sprite = frame.Data;
-            
         // If we already have an image, or the image doesn't fit...
         if (_sprite != null || !Fits(sprite))
             // ...attempt to insert right, then attempt to insert left, and finally return null if neither of those worked.
-            return _right?.Insert(frame) ?? _left?.Insert(frame);
+            return _right?.Insert(sprite) ?? _left?.Insert(sprite);
             
         // Otherwise, the image fits so we should take it and try to create more space for other images.
         _sprite = sprite;

@@ -47,7 +47,7 @@ class Program
 
         enumCommand.SetHandler((dir, output, name, nameSpace) =>
         {
-            Packer.Enum(dir!, output!, name!, nameSpace!);
+            //Packer.Enum(dir!, output!, name!, nameSpace!);
         },
             dirOption, outputOption, nameOption, namespaceOption);
 
