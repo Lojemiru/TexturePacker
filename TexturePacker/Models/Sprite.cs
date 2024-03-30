@@ -5,28 +5,26 @@ namespace TexturePacker.Models;
 
 internal sealed class Sprite
 {
-    public readonly Metadata Metadata;
     public readonly FakeRectangle[] Positions;
     private readonly int _width;
     private readonly int _height;
     private readonly int[][] CropOffsets;
+    private string Name;
 
-    public Sprite(FileSystemInfo metadata, int width, int height, int[][] cropOffsets)
+    public Sprite(int width, int height)
     {
-        Metadata = Metadata.FromJson(File.ReadAllText(metadata.FullName));
-        Positions = new FakeRectangle[Metadata.FrameCount];
         _width = width;
         _height = height;
-        CropOffsets = cropOffsets;
     }
 
     public override string ToString()
     {
-        var md = Export();
+        //var md = Export();
 
-        return "\"" + Metadata.Name + "\":" + JsonConvert.SerializeObject(md);
+        return "\"" + Name + "\":";// + JsonConvert.SerializeObject(md);
     }
 
+    /*
     private MetadataFinal Export()
     {
         MetadataFinal md = new()
@@ -43,4 +41,5 @@ internal sealed class Sprite
 
         return md;
     }
+    */
 }
