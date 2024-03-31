@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using TexturePacker.Models;
@@ -117,22 +118,28 @@ public static class Packer
         if (dir == outDir)
             throw new ArgumentException("Input directory is the same as the output directory!");
 
+        // Create output directory if it does not exist.
         if (!Directory.Exists(outDir.FullName))
             Directory.CreateDirectory(outDir.FullName);
-        
-        
+
         // Delete all files in output folder.
         foreach (var file in outDir.GetFiles())
         {
             if (file.Name.EndsWith(".json") || file.Name.EndsWith(".png"))
                 file.Delete();
         }
-
+        
+        var stopWatch = new Stopwatch();
+        stopWatch.Start();
+        
         // Pack all texture groups found in input directory.
         foreach (var page in dir.GetDirectories())
         {
             PackPage(page, outDir);
         }
+        
+        stopWatch.Stop();
+        Console.WriteLine("Packed " + PageNames.Count + " pages (" + SpriteNames.Count + " sprites total) in " + stopWatch.Elapsed);
 
         // Exit if outDirEnums is not set.
         if (outDirEnums is null) 
@@ -173,6 +180,8 @@ public static class Packer
             : new PageOptions();
 
         var name = dir.Name;
+        
+        Console.WriteLine("Packing page " + name + "...");
 
         PageNames.Add(name);
         
