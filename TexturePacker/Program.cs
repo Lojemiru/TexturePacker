@@ -1,12 +1,6 @@
-﻿using TexturePacker.Models;
+﻿using System.CommandLine;
 
 namespace TexturePacker;
-
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
-using System.CommandLine;
-using Rectangle = SixLabors.ImageSharp.Rectangle;
 
 // Full disclosure - no code was directly used, but I poked through these as my learning material:
 // https://blackpawn.com/texts/lightmaps/default.html
@@ -21,56 +15,36 @@ class Program
     {
         var rootCommand = new RootCommand("Texture packer. Shenanigans abound!!!");
 
-        var enumCommand = new Command("enum", "Compiles a folder of enum files into a single target enum .cs file with the given namespace.");
-
-        var dirOption = new Option<DirectoryInfo?>(
-            name: "--input",
-            description: "The directory to grab enum .cs files from.");
-
-        var outputOption = new Option<FileInfo?>(
-            name: "--output",
-            description: "The output file.");
-
-        var namespaceOption = new Option<string>(
-            name: "--namespace",
-            description: "The namespace for the output enums.");
-
-        var nameOption = new Option<string>(
-            name: "--name",
-            description: "The name of the output file."
-            );
-
-        enumCommand.AddOption(dirOption);
-        enumCommand.AddOption(outputOption);
-        enumCommand.AddOption(namespaceOption);
-        enumCommand.AddOption(nameOption);
-
-        enumCommand.SetHandler((dir, output, name, nameSpace) =>
-        {
-            //Packer.Enum(dir!, output!, name!, nameSpace!);
-        },
-            dirOption, outputOption, nameOption, namespaceOption);
-
-        rootCommand.AddCommand(enumCommand);
-
-        var packCommand = new Command("pack", "Packs textures from a folder into a texturepage, JSON metadata, and an enum file.");
+        var packCommand = new Command("pack", "Packs a texture group collection into individual atlases with accompanying metadata JSON files.");
 
         var dirOption2 = new Option<DirectoryInfo?>(
             name: "--input",
-            description: "The directory to begin packing from.");
+            description: "The parent directory of the texture groups you desire to pack.");
 
         var outputOption2 = new Option<DirectoryInfo?>(
             name: "--output",
-            description: "The output directory for the resulting texturepage.");
+            description: "The output directory for the resulting atlases and metadata.");
+
+        var outputOption3 = new Option<DirectoryInfo?>(
+            name: "--enums",
+            description: "Enables enum generation and specifies the output directory for the resulting enums."
+            );
+
+        var namespaceOption = new Option<string?>(
+            name: "--namespace",
+            description: "Specifies the namespace used for enum generation. Defaults to 'GameContent'."
+            );
 
         packCommand.AddOption(dirOption2);
         packCommand.AddOption(outputOption2);
+        packCommand.AddOption(outputOption3);
+        packCommand.AddOption(namespaceOption);
 
-        packCommand.SetHandler((dir, output) =>
+        packCommand.SetHandler((dir, output, enumOutput, nameSpace) =>
         {
-            Packer.PackAllPages(dir!, output!);
+            Packer.PackAllPages(dir!, output!, enumOutput, nameSpace ?? "GameContent");
         },
-            dirOption2, outputOption2);
+            dirOption2, outputOption2, outputOption3, namespaceOption);
 
 
         rootCommand.AddCommand(packCommand);

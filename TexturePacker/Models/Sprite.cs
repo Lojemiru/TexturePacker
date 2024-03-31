@@ -1,28 +1,44 @@
 using Newtonsoft.Json;
-using TexturePacker.QuickType;
 
 namespace TexturePacker.Models;
 
-internal sealed class Sprite
+public sealed class Sprite
 {
     // Layer, frame
+    [JsonProperty("P")]
     public readonly FakeRectangle[][] Positions;
-    private readonly int _width;
-    private readonly int _height;
+    
+    [JsonProperty("W")]
+    public readonly int Width;
+    
+    [JsonProperty("H")]
+    public readonly int Height;
+    
     // Layer, frame, then x/y as indexes 0 and 1
-    public readonly int[][][] CropOffsets;
+    [JsonProperty("C")]
+    public int[][][]? CropOffsets;
+    
     public readonly string Name;
+    
+    [JsonProperty("L")]
     public readonly int Length;
+    
     public readonly int Layers;
+    
+    [JsonProperty("X")]
     public int OriginX;
+    
+    [JsonProperty("Y")]
     public int OriginY;
+    
+    [JsonProperty("A")]
     public readonly Dictionary<string, int[][]> AttachPoints = new ();
 
     public Sprite(string name, int width, int height, int layers, int length)
     {
         Name = name;
-        _width = width;
-        _height = height;
+        Width = width;
+        Height = height;
         CropOffsets = new int[layers][][];
         Positions = new FakeRectangle[layers][];
         Layers = layers;
@@ -31,19 +47,18 @@ internal sealed class Sprite
 
     public override string ToString()
     {
-        var md = Export();
+        if (NullCropOffsets())
+            CropOffsets = null;
 
-        return "\"" + Name + "\":"+ JsonConvert.SerializeObject(md);
+        return "\"" + Name + "\":"+ JsonConvert.SerializeObject(this);
     }
 
     private bool NullCropOffsets()
     {
-        foreach (var layer in CropOffsets)
+        foreach (var layer in CropOffsets!)
         {
             foreach (var frame in layer)
             {
-                //Console.WriteLine(frame[0]);
-            
                 if (frame[0] != 0 || frame[1] != 0)
                 {
                     return false;
@@ -52,22 +67,5 @@ internal sealed class Sprite
         }
 
         return true;
-    }
-    
-    private MetadataFinal Export()
-    {
-        MetadataFinal md = new()
-        {
-            Length = Length,
-            OriginX = OriginX,
-            OriginY = OriginY,
-            AttachPoints = AttachPoints,
-            Positions = Positions,
-            Width = _width,
-            Height = _height,
-            CropOffsets = NullCropOffsets() ? null : CropOffsets
-        };
-
-        return md;
     }
 }
