@@ -42,6 +42,8 @@ internal sealed class Sprite
         {
             foreach (var frame in layer)
             {
+                //Console.WriteLine(frame[0]);
+            
                 if (frame[0] != 0 || frame[1] != 0)
                 {
                     return false;

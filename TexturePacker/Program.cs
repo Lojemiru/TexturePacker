@@ -59,30 +59,18 @@ class Program
             name: "--input",
             description: "The directory to begin packing from.");
 
-        var sizeOption = new Option<int>(
-            name: "--size",
-            description: "The size of the output texturepage, in pixels.",
-            getDefaultValue: () => 2048);
-
         var outputOption2 = new Option<DirectoryInfo?>(
             name: "--output",
             description: "The output directory for the resulting texturepage.");
 
-        var nameOption2 = new Option<string>(
-            name: "--name",
-            description: "The name of the output file."
-            );
-
         packCommand.AddOption(dirOption2);
-        packCommand.AddOption(sizeOption);
         packCommand.AddOption(outputOption2);
-        packCommand.AddOption(nameOption2);
 
-        packCommand.SetHandler((dir, size, output, name) =>
+        packCommand.SetHandler((dir, output) =>
         {
-            Packer.Pack(dir!, size!, output!, name!);
+            Packer.PackAllPages(dir!, output!);
         },
-            dirOption2, sizeOption, outputOption2, nameOption2);
+            dirOption2, outputOption2);
 
 
         rootCommand.AddCommand(packCommand);

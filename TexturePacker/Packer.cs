@@ -20,8 +20,22 @@ public static class Packer
 
 ";
 
-    public static void Pack(DirectoryInfo dir, int size, DirectoryInfo outDir, string name)
+    public static void PackAllPages(DirectoryInfo dir, DirectoryInfo outDir)
     {
+        foreach (var page in dir.GetDirectories())
+        {
+            PackPage(page, outDir);
+        }
+    }
+
+    public static void PackPage(DirectoryInfo dir, DirectoryInfo outDir)
+    {
+        var options = File.Exists(dir + "/PageOptions.json") 
+            ? PageOptions.FromJson(File.ReadAllText(dir + "/PageOptions.json")) 
+            : new PageOptions();
+
+        var name = dir.Name;
+        
         LoadSprites(dir);
 
         // Sort list from largest to smallest. I am lying to the computer here to get the largest images FIRST (inverting 1/-1).
@@ -39,7 +53,7 @@ public static class Packer
             return 0;
         });
         
-        Node root = new(new Rectangle(0, 0, size, size));
+        Node root = new(new Rectangle(0, 0, options.Size, options.Size));
 
         foreach (var frame in Frames)
         {
@@ -51,29 +65,29 @@ public static class Packer
             }
         }
         
-        //var enumOutput = "";
+        var enumOutput = "";
 
         foreach (var sprite in Sprites)
         {
             _exportJson += sprite + ",\n";
-            //enumOutput += sprite.Name + ",\n";
+            enumOutput += sprite.Name + ",\n";
         }
 
         _exportJson += "}}";
         
         File.WriteAllText(outDir + "/" + name + ".json", _exportJson);
 
-        //if (!Directory.Exists(outDir + "/enums"))
-        //    Directory.CreateDirectory(outDir + "/enums");
+        if (!Directory.Exists(outDir + "/enums"))
+            Directory.CreateDirectory(outDir + "/enums");
         
-        //File.AppendAllText(outDir + "/enums/pages.enumPart", name + ",\n");
+        File.AppendAllText(outDir + "/enums/pages.enumPart", name + ",\n");
         
-        //if (!Directory.Exists(outDir + "/enums/sprites"))
-        //    Directory.CreateDirectory(outDir + "/enums/sprites");
+        if (!Directory.Exists(outDir + "/enums/sprites"))
+            Directory.CreateDirectory(outDir + "/enums/sprites");
         
-        //File.WriteAllText(outDir + "/enums/sprites/" + name + ".enumPart", enumOutput);
+        File.WriteAllText(outDir + "/enums/sprites/" + name + ".enumPart", enumOutput);
         
-        Image<Rgba32> canvas = new(size, size);
+        Image<Rgba32> canvas = new(options.Size, options.Size);
         
         root.Render(canvas);
         
@@ -128,7 +142,9 @@ public static class Packer
                     1 + cropRight - cropLeft, 1 + cropBottom - cropTop))
                 .Pad(img.Width + 2, img.Height + 2));
         
-        parent.CropOffsets[layerIndex][index] = new[] { cropLeft, cropTop };
+        //Console.WriteLine(cropLeft + ", " + cropTop + ", " + cropRight + ", " + cropBottom);
+        
+        //parent.CropOffsets[layerIndex][index] = new[] { cropLeft, cropTop };
     }
 
     private static void ParseCelData(Aseprite.Cel cel, Sprite parent, int index, List<string> layers, 
@@ -170,9 +186,9 @@ public static class Packer
         {
             if (file.Extension == ".aseprite")
             {
-                var ase = new Aseprite(file.FullName);
-
                 Console.WriteLine(file.Name + ":");
+                
+                var ase = new Aseprite(file.FullName);
 
                 var layers = MapLayers(ase);
 
