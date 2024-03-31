@@ -5,29 +5,29 @@ namespace TexturePacker.QuickType;
 
 public class MetadataFinal
 {
-    [JsonProperty("length")]
+    [JsonProperty("L")]
     public int Length { get; set; }
 
-    [JsonProperty("originX")]
+    [JsonProperty("X")]
     public int OriginX { get; set; }
 
-    [JsonProperty("originY")]
+    [JsonProperty("Y")]
     public int OriginY { get; set; }
 
-    [JsonProperty("attachPoints")]
+    [JsonProperty("A")]
     public Dictionary<string, int[][]> AttachPoints { get; set; }
 
-    [JsonProperty("positions")]
-    public FakeRectangle[] Positions { get; set; }
+    [JsonProperty("P")]
+    public FakeRectangle[][] Positions { get; set; }
 
-    [JsonProperty("width")]
+    [JsonProperty("W")]
     public int Width { get; set; }
         
-    [JsonProperty("height")]
+    [JsonProperty("H")]
     public int Height { get; set; }
         
-    [JsonProperty("cropOffsets")]
-    public int[][] CropOffsets { get; set; }
+    [JsonProperty("C")]
+    public int[][][]? CropOffsets { get; set; }
 
     public static MetadataFinal FromJson(string json) => JsonConvert.DeserializeObject<MetadataFinal>(json, QuickType.Converter.Settings);
 }

@@ -46,10 +46,32 @@ public static class Packer
             var node = root.Insert(frame.Data);
             if (node != null)
             {
-                //Console.WriteLine(node.Bounds);
-                // uhhhhhhh record bounds???
+                frame.Parent.Positions[frame.Layer][frame.Index] = new FakeRectangle(node.Bounds.X + 1, 
+                    node.Bounds.Y + 1, node.Bounds.Width - 2, node.Bounds.Height - 2);
             }
         }
+        
+        //var enumOutput = "";
+
+        foreach (var sprite in Sprites)
+        {
+            _exportJson += sprite + ",\n";
+            //enumOutput += sprite.Name + ",\n";
+        }
+
+        _exportJson += "}}";
+        
+        File.WriteAllText(outDir + "/" + name + ".json", _exportJson);
+
+        //if (!Directory.Exists(outDir + "/enums"))
+        //    Directory.CreateDirectory(outDir + "/enums");
+        
+        //File.AppendAllText(outDir + "/enums/pages.enumPart", name + ",\n");
+        
+        //if (!Directory.Exists(outDir + "/enums/sprites"))
+        //    Directory.CreateDirectory(outDir + "/enums/sprites");
+        
+        //File.WriteAllText(outDir + "/enums/sprites/" + name + ".enumPart", enumOutput);
         
         Image<Rgba32> canvas = new(size, size);
         
@@ -75,7 +97,7 @@ public static class Packer
         return output;
     }
 
-    private static void Crop(this Image<Rgba32> img)
+    private static void Crop(this Image<Rgba32> img, Sprite parent, int layerIndex, int index)
     {
         var cropLeft = img.Width;
         var cropRight = 0;
@@ -106,30 +128,39 @@ public static class Packer
                     1 + cropRight - cropLeft, 1 + cropBottom - cropTop))
                 .Pad(img.Width + 2, img.Height + 2));
         
-        // TODO: Record crop offsets
+        parent.CropOffsets[layerIndex][index] = new[] { cropLeft, cropTop };
     }
 
-    private static void ParseCelData(Aseprite.Cel cel, Sprite parent, int index, List<string> layers)
+    private static void ParseCelData(Aseprite.Cel cel, Sprite parent, int index, List<string> layers, 
+        Dictionary<string, Dictionary<int, int[]>> attachPoints)
     {
         var layer = cel.Layer.Name;
 
         if (!layer.StartsWith('_'))
         {
+            // if you're wandering in here wondering why special blend modes are busted it's probably because we are
+            // directly reading the bytes into an image. I do not care about this behavior right now so I'm not doing
+            // the extra work to support it but you probably want to add some stuff to Aseprite.cs and then read pixels
+            // instead of bytes
             var img = Image.LoadPixelData<Rgba32>(cel.Bytes, cel.Width, cel.Height);
-
-            img.Crop();
+            var layerIndex = layers.IndexOf(layer);
             
-            Frames.Add(new Frame(img, parent, index, layers.IndexOf(layer)));
+            img.Crop(parent, layerIndex, index);
+            
+            Frames.Add(new Frame(img, parent, index, layerIndex));
         }
         // Attach points
         else if (layer.StartsWith("_attach_"))
         {
-            // TODO: Get attach point data
+            var name = layer.Replace("_attach_", "");
+
+            attachPoints[name][index] = new[] { cel.X, cel.Y };
         }
         // Origin
         else if (layer == "_origin")
         {
-            // TODO: get origin
+            parent.OriginX = cel.X;
+            parent.OriginY = cel.Y;
         }
     }
 
@@ -145,28 +176,48 @@ public static class Packer
 
                 var layers = MapLayers(ase);
 
-                var sprite = new Sprite(ase.Width, ase.Height);
+                var sprite = new Sprite(Path.GetFileNameWithoutExtension(file.Name), ase.Width, ase.Height, layers.Count, ase.FrameCount);
+                
+                Sprites.Add(sprite);
 
-                var i = 0;
-                foreach (var frame in ase.Frames)
+                int i;
+                for (i = 0; i < sprite.Layers; i++)
                 {
-                    List<Image> frames = new();
+                    sprite.CropOffsets[i] = new int[sprite.Length][];
+                    sprite.Positions[i] = new FakeRectangle[sprite.Length];
+                }
 
-                    foreach (var cel in frame.Cels)
-                    {
-                        Console.WriteLine("\t" + cel.Layer.Name);
-                        
-                        ParseCelData(cel, sprite, i, layers);
-                    }
-
-                    i++;
+                var attachPoints = new Dictionary<string, Dictionary<int, int[]>>();
+                
+                foreach (var layer in ase.Layers)
+                {
+                    if (!layer.Name.StartsWith("_attach_")) 
+                        continue;
+                    
+                    var name = layer.Name.Replace("_attach_", "");
+                    attachPoints[name] = new Dictionary<int, int[]>();
                 }
                 
-                // TODO: Set other Sprite data
+                for (i = 0; i < ase.FrameCount; i++)
+                {
+                    foreach (var cel in ase.Frames[i].Cels)
+                    {
+                        ParseCelData(cel, sprite, i, layers, attachPoints);
+                    }
+                }
+
+                foreach (var layer in attachPoints.Keys)
+                {
+                    var count = attachPoints[layer].Count;
+                    sprite.AttachPoints[layer] = new int[count][];
+                    
+                    for (i = 0; i < count; i++)
+                    {
+                        sprite.AttachPoints[layer][i] = attachPoints[layer][i];
+                    }
+                }
             }
         }
-        
-        // TODO: Generate most metadata
     }
 
     /*
