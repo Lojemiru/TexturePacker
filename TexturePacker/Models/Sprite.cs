@@ -18,12 +18,12 @@ public sealed class Sprite
     [JsonProperty("C")]
     public int[][][]? CropOffsets;
     
-    public readonly string Name;
+    internal readonly string Name;
     
     [JsonProperty("L")]
     public readonly int Length;
     
-    public readonly int Layers;
+    internal readonly int Layers;
     
     [JsonProperty("X")]
     public int OriginX;
