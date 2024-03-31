@@ -116,6 +116,10 @@ public static class Packer
         // Throw if user is being silly and sets output to input.
         if (dir == outDir)
             throw new ArgumentException("Input directory is the same as the output directory!");
+
+        if (!Directory.Exists(outDir.FullName))
+            Directory.CreateDirectory(outDir.FullName);
+        
         
         // Delete all files in output folder.
         foreach (var file in outDir.GetFiles())
