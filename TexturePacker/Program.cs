@@ -13,7 +13,7 @@ class Program
 {
     static async Task<int> Main(string[] args)
     {
-        var rootCommand = new RootCommand("Texture packer. Shenanigans abound!!!");
+        var rootCommand = new RootCommand("Lojemiru's TexturePacker. For use with Another Mediocre 2D Engine.");
 
         var packCommand = new Command("pack", "Packs a texture group collection into individual atlases with accompanying metadata JSON files.");
 
