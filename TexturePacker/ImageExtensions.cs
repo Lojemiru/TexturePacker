@@ -44,7 +44,7 @@ public static class ImageExtensions
         if (cropLeft != 0 || cropRight != img.Width || cropTop != 0 || cropBottom != img.Height)
             img.Mutate(x => x.Crop(new Rectangle(cropLeft, cropTop, 
                     1 + cropRight - cropLeft, 1 + cropBottom - cropTop))
-                .Pad(img.Width + 2, img.Height + 2));
+                .Pad(img.Width, img.Height));
 
         parent.CropOffsets![layerIndex][index] = new[] { cropLeft + cel.X, cropTop + cel.Y };
     }

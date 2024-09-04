@@ -1,5 +1,6 @@
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
 namespace TexturePacker.Models;
@@ -31,14 +32,14 @@ internal sealed class Node
 
         // Width still has room - create new Node
         if (Bounds.Width - _sprite.Width > 0)
-            _right = new Node(new Rectangle(Bounds.X + _sprite.Width, Bounds.Y, Bounds.Width - _sprite.Width, _sprite.Height));
+            _right = new Node(new Rectangle(Bounds.X + _sprite.Width + 2, Bounds.Y, Bounds.Width - _sprite.Width - 2, _sprite.Height));
 
         // Height still has room - create new Node
         if (Bounds.Height - _sprite.Height > 0)
-            _left = new Node(new Rectangle(Bounds.X, Bounds.Y + _sprite.Height, Bounds.Width, Bounds.Height - _sprite.Height));
+            _left = new Node(new Rectangle(Bounds.X, Bounds.Y + _sprite.Height + 2, Bounds.Width, Bounds.Height - _sprite.Height - 2));
 
         // Set bounds to match sprite
-        Bounds = new Rectangle(Bounds.X, Bounds.Y, _sprite.Width, _sprite.Height);
+        Bounds = new Rectangle(Bounds.X, Bounds.Y, _sprite.Width + 2, _sprite.Height + 2);
 
         return this;
     }
@@ -47,7 +48,14 @@ internal sealed class Node
     {
         if (_sprite != null)
         {
-            canvas.Mutate(c => c.DrawImage(_sprite, new Point(Bounds.X, Bounds.Y), 1f));
+            // Yes, this sucks. No, I don't have a better way to extrude the edges.
+            // We do this extrusion to make sure that floating-point math doesn't create seams when you're trying to
+            // render from the output atlas in a tiling context.
+            canvas.Mutate(c => c.DrawImage(_sprite, new Point(Bounds.X - 1, Bounds.Y), 1f));
+            canvas.Mutate(c => c.DrawImage(_sprite, new Point(Bounds.X + 1, Bounds.Y), 1f));
+            canvas.Mutate(c => c.DrawImage(_sprite, new Point(Bounds.X, Bounds.Y - 1), 1f));
+            canvas.Mutate(c => c.DrawImage(_sprite, new Point(Bounds.X, Bounds.Y + 1), 1f));
+            canvas.Mutate(c => c.DrawImage(_sprite, new Point(Bounds.X, Bounds.Y), PixelColorBlendingMode.Normal, PixelAlphaCompositionMode.Src, 1f));
         }
 
         _left?.Render(canvas);

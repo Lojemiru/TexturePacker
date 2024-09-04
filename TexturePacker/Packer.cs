@@ -214,8 +214,8 @@ public static class Packer
             if (node != null)
             {
                 // Record positions to the parent Sprite for the JSON metadata.
-                frame.Parent.Positions[frame.Layer][frame.Index] = new FakeRectangle(node.Bounds.X + 1, 
-                    node.Bounds.Y + 1, node.Bounds.Width - 2, node.Bounds.Height - 2);
+                frame.Parent.Positions[frame.Layer][frame.Index] = new FakeRectangle(node.Bounds.X, 
+                    node.Bounds.Y, node.Bounds.Width - 2, node.Bounds.Height - 2);
             }
         }
 
