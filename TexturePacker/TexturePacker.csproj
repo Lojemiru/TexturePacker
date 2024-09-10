@@ -6,8 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Company>Lojemiru</Company>
-    <AssemblyVersion>2.0.0</AssemblyVersion>
-    <Version>2.1.0</Version>
+    <AssemblyVersion>2.2.0</AssemblyVersion>
+    <Version>2.2.0</Version>
   </PropertyGroup>
 
   <ItemGroup>

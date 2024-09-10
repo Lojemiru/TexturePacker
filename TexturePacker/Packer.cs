@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Numerics;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using TexturePacker.Models;
@@ -128,6 +129,14 @@ public static class Packer
             if (file.Name.EndsWith(".json") || file.Name.EndsWith(".png"))
                 file.Delete();
         }
+
+        // Wipe all previous palette outputs.
+        if (Directory.Exists(outDir + "/palettes"))
+        {
+            foreach (var file in new DirectoryInfo(outDir + "/palettes").GetFiles())
+                if (file.Name.EndsWith(".png"))
+                    file.Delete();
+        }
         
         var stopWatch = new Stopwatch();
         stopWatch.Start();
@@ -182,11 +191,113 @@ public static class Packer
         var name = dir.Name;
         
         Console.WriteLine("Packing page " + name + "...");
+        Console.WriteLine($"\t{options}");
 
         PageNames.Add(name);
         
         // Load all sprite data from group.
         LoadSprites(dir);
+
+        var colors = new Dictionary<int, HashSet<Rgba32>>();
+
+        // Indexing is a bit of a doozy. I'll try to keep this decently commented...
+        if (options.PackIndexed)
+        {
+            // Iterate over all frames to add all colors.
+            foreach (var frame in Frames)
+            {
+                // Skip excluded.
+                if (options.IndexingExcludedNames.Contains(frame.Parent.Name))
+                    continue;
+                
+                // Iterate over every pixel of current frame.
+                for (var i = 0; i < frame.Width; i++)
+                {
+                    for (var j = 0; j < frame.Height; j++)
+                    {
+                        // If we haven't set up this layer, do so.
+                        if (!colors.ContainsKey(frame.Layer))
+                            colors.Add(frame.Layer, new HashSet<Rgba32>());
+
+                        // Add color if it's alpha is greater than 0.
+                        var col = frame.Data[i, j];
+                        if (col.A > 0)
+                            colors[frame.Layer].Add(col);
+                    }
+                }
+            }
+            
+            // Set up palettes output.
+            if (!Directory.Exists(outDir + "/palettes"))
+                Directory.CreateDirectory(outDir + "/palettes");
+
+            var colorsDict = new Dictionary<int, List<Rgba32>>();
+            
+            foreach (var colorSet in colors)
+            {
+                var palette = new Image<Rgba32>(1, 256);
+
+                var colorsList = colorSet.Value.ToList();
+                
+                // It turns out that linearly sorting colors is a huge mess. Absolutely massive.
+                // I want a /perceptual/ sort, as I need artists to be able to work with the output palettes.
+                // This is the result of my ideal "perceptual" sort. Sorry that it's not a nice mathematical sort, but
+                // colors just don't work like that in linear space.
+                colorsList.Sort(delegate(Rgba32 x, Rgba32 y)
+                {
+                    #region Equality pass - catch "pure" colors that shouldn't have a defined hue.
+                    
+                    var tolerance = options.IndexingEqualityThreshold;
+                    var equalX = Math.Abs(x.R - x.G) <= tolerance && Math.Abs(x.G - x.B) <= tolerance && Math.Abs(x.R - x.B) <= tolerance;
+                    var equalY = Math.Abs(y.R - y.G) <= tolerance && Math.Abs(y.G - y.B) <= tolerance && Math.Abs(y.R - y.B) <= tolerance;
+                    
+                    if (equalX && !equalY)
+                        return 1;
+
+                    if (!equalX && equalY)
+                        return -1;
+
+                    if (equalX && equalY)
+                        return x.R > y.R ? 1 : -1;
+                    
+                    #endregion
+                    
+                    
+                    var hueX = System.Drawing.Color.FromArgb(x.R, x.G, x.B).GetHue();
+                    var hueY = System.Drawing.Color.FromArgb(y.R, y.G, y.B).GetHue();
+
+                    if (hueX > hueY)
+                        return 1;
+
+                    return -1;
+                });
+
+                colorsDict[colorSet.Key] = colorsList;
+
+                for (var i = 0; i < colorsList.Count; i++)
+                    palette[0, i] = colorsList[i];
+
+                palette.SaveAsPng($"{outDir}/palettes/{name}_{colorSet.Key}.png");
+                
+                Console.WriteLine($"\tGenerated palette for layer {colorSet.Key} with {colorSet.Value.Count} colors.");
+            }
+
+            foreach (var frame in Frames)
+            {
+                if (options.IndexingExcludedNames.Contains(frame.Parent.Name))
+                    continue;
+                
+                for (var i = 0; i < frame.Width; i++)
+                {
+                    for (var j = 0; j < frame.Height; j++)
+                    {
+                        var col = frame.Data[i, j];
+                        if (colors[frame.Layer].Contains(col))
+                            frame.Data[i, j] = new Rgba32(new Vector3(colorsDict[frame.Layer].IndexOf(col) / 255f));
+                    }
+                }
+            }
+        }
 
         // Sort list from largest to smallest based on height.
         // I am lying to the computer here to get the largest images FIRST (inverting 1/-1).
@@ -241,6 +352,8 @@ public static class Packer
         
         // Save atlas to disk.
         atlas.SaveAsPng(outDir + "/" + name + ".png");
+        
+        Console.WriteLine($"\tPacked {Sprites.Count} sprites ({Frames.Count} frames total).\n");
     }
 
     /// <summary>
