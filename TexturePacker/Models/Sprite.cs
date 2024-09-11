@@ -1,4 +1,7 @@
 using Newtonsoft.Json;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 
 namespace TexturePacker.Models;
 
@@ -18,7 +21,7 @@ public sealed class Sprite
     [JsonProperty("C")]
     public int[][][]? CropOffsets;
     
-    internal readonly string Name;
+    internal string Name;
     
     [JsonProperty("L")]
     public readonly int Length;
@@ -34,6 +37,8 @@ public sealed class Sprite
     [JsonProperty("A")]
     public readonly Dictionary<string, int[][]> AttachPoints = new ();
 
+    internal TexturePage Atlas;
+
     public Sprite(string name, int width, int height, int layers, int length)
     {
         Name = name;
@@ -43,6 +48,23 @@ public sealed class Sprite
         Positions = new FakeRectangle[layers][];
         Layers = layers;
         Length = length;
+    }
+    
+    [JsonConstructor]
+    public Sprite([JsonProperty("L")] int length, [JsonProperty("X")] int originX,
+        [JsonProperty("Y")] int originY, [JsonProperty("A")] Dictionary<string, int[][]> attachPoints,
+        [JsonProperty("P")] FakeRectangle[][] positions, [JsonProperty("W")] int width,
+        [JsonProperty("H")] int height, [JsonProperty("C")] int[][][]? cropOffsets)
+    {
+        Length = length;
+        OriginX = originX;
+        OriginY = originY;
+        AttachPoints = attachPoints;
+        Positions = positions;
+        Width = width;
+        Height = height;
+        CropOffsets = cropOffsets;
+        Layers = positions.Length;
     }
 
     public override string ToString()
@@ -67,5 +89,79 @@ public sealed class Sprite
         }
 
         return true;
+    }
+
+    public void WriteToDirectory(string dir)
+    {
+        AsepriteGenerator.Generate(this, $"{dir}/{Name}.aseprite");
+    }
+
+    public byte[] FrameToBytes(int frame, int layer)
+    {
+        var fakeRectangle = Positions[layer][frame];
+        var img = new Image<Rgba32>(Width, Height);
+
+        img.Mutate(c => c.DrawImage(Atlas.Texture, fakeRectangle.ToRectangle(), PixelColorBlendingMode.Normal, PixelAlphaCompositionMode.Src, 1f));
+
+        if (CropOffsets is not null)
+        {
+            var x = CropOffsets[layer][frame][0];
+            var y = CropOffsets[layer][frame][1];
+            var copy = new Image<Rgba32>(Width, Height);
+            
+            copy.Mutate(c => c.DrawImage(img, new Point(x, y), PixelColorBlendingMode.Normal, PixelAlphaCompositionMode.Src, 1f));
+            img = copy;
+        }
+
+        return ImageToBytes(img);
+    }
+
+    public byte[] DataPointBytes()
+    {
+        var img = new Image<Rgba32>(1, 1);
+
+        img[0, 0] = new Rgba32(0, 0, 0, 255);
+
+        return ImageToBytes(img);
+    }
+
+    public int GetChunkCount(int frame)
+    {
+        var output = Layers;
+        
+        // Origin
+        if (frame == 0)
+            output++;
+
+        foreach (var ap in AttachPoints.Values)
+        {
+            if (frame < ap.Length)
+                output++;
+        }
+
+        return output;
+    }
+
+    private static byte[] ImageToBytes(Image<Rgba32> image)
+    {
+        var output = new byte[image.Width * image.Height * 4];
+        var current = 0;
+        
+        for (var i = 0; i < image.Height; i++)
+        {
+            for (var j = 0; j < image.Width; j++)
+            {
+                var pixel = image[j, i];
+
+                output[current] = pixel.R;
+                output[current + 1] = pixel.G;
+                output[current + 2] = pixel.B;
+                output[current + 3] = pixel.A;
+                
+                current += 4;
+            }
+        }
+
+        return output;
     }
 }

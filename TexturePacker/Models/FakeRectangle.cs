@@ -1,5 +1,7 @@
 
 
+using SixLabors.ImageSharp;
+
 namespace TexturePacker.Models;
 
 public class FakeRectangle
@@ -15,5 +17,10 @@ public class FakeRectangle
         Y = y;
         Width = width;
         Height = height;
+    }
+
+    public Rectangle ToRectangle()
+    {
+        return new Rectangle(X, Y, Width, Height);
     }
 }

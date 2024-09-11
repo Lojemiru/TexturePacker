@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Text;
+using ICSharpCode.SharpZipLib.Zip.Compression.Streams;
 
 // TODO: Replace with Alex's even more up-to-date version and move away from consuming raw bytes for rendering 
 
@@ -289,12 +290,13 @@ public struct AsepritePoint
                                 cel.Height = WORD();
 
                                 var count = cel.Width * cel.Height * (int)Mode;
-                                //temp = new byte[count];
 
                                 // RAW
                                 if (celType == 0)
                                 {
-                                    reader.Read(temp, 0, cel.Width * cel.Height * (int)Mode);
+                                    var readSoFar = 0;
+                                    while (readSoFar != count)
+                                        readSoFar += reader.Read(temp, readSoFar, count - readSoFar);
                                 }
                                 // DEFLATE
                                 else
@@ -303,11 +305,16 @@ public struct AsepritePoint
                                     // "...skipping past the first two bytes solved the problem. Those bytes are part of
                                     // the zlib specification (RFC 1950), not the deflate specification (RFC 1951).
                                     // Those bytes contain information about the compression method and flags."
-                                    SEEK(2);
+                                    // SEEK(2);
                                     
-                                    var deflate = new DeflateStream(reader.BaseStream, CompressionMode.Decompress, true);
-                                    int toRead = count;
-                                    int readSoFar = 0;
+                                    // NO. I HAVE REPLACED THIS ^ It was a tolerable stopgap, but it only works if you
+                                    // can GUARANTEE that you're getting exactly identical ZLib compression, which can
+                                    // cause issues when working with files generated outside of Aseprite itself.
+                                    // ...admittedly, I can't find anybody else that's really done that before. But now
+                                    // I have, so it has to be supported. SharpZipLib is /much/ nicer about this.
+
+                                    var deflate = new InflaterInputStream(reader.BaseStream);
+                                    var readSoFar = 0;
                                     while (readSoFar != count)
                                         readSoFar += deflate.Read(temp, readSoFar, count - readSoFar);
                                 }
@@ -617,7 +624,6 @@ public struct AsepritePoint
         {
             for (int p = 0, b = 0; p < len; p++, b += 4)
             {
-                //Console.WriteLine(bytes[b] + "" + bytes[b + 1] + "" + bytes[b + 2] + "" + bytes[b + 3]);
                 pixels[p].R = (byte)(bytes[b + 0] * bytes[b + 3] / 255);
                 pixels[p].G = (byte)(bytes[b + 1] * bytes[b + 3] / 255);
                 pixels[p].B = (byte)(bytes[b + 2] * bytes[b + 3] / 255);

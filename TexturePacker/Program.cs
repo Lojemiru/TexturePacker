@@ -45,9 +45,31 @@ class Program
             Packer.PackAllPages(dir!, output!, enumOutput, nameSpace ?? "GameContent");
         },
             dirOption2, outputOption2, outputOption3, namespaceOption);
-
-
+        
         rootCommand.AddCommand(packCommand);
+
+        var unpackCommand = new Command("unpack", "Unpacks an atlas+metadata combo into individual files.");
+
+        var inputOption = new Option<DirectoryInfo?>(
+            name: "--input",
+            description: "The parent directory of the texture atlases you desire to unpack."
+        );
+
+        var outputOption = new Option<DirectoryInfo?>(
+            name: "--output",
+            description: "The output directory for the resulting individual sprites."
+        );
+        
+        unpackCommand.AddOption(inputOption);
+        unpackCommand.AddOption(outputOption);
+        
+        unpackCommand.SetHandler((input, output) =>
+        {
+            Unpacker.UnpackAllPages(input!, output!);
+        },
+            inputOption, outputOption);
+        
+        rootCommand.AddCommand(unpackCommand);
 
         return await rootCommand.InvokeAsync(args);
     }
