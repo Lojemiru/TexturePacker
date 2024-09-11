@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Runtime.CompilerServices;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using SixLabors.ImageSharp;
@@ -14,8 +13,13 @@ public sealed class TexturePage
     /// </summary>
     [JsonProperty("sprites")]
     public Dictionary<string, Sprite> Sprites { get; private set; }
+    
+    [JsonProperty("options")]
+    public PageOptions Options { get; private set; }
 
     public Image<Rgba32> Texture;
+
+    public Image<Rgba32>[] Palettes; 
 
     public string Name;
     
@@ -93,6 +97,23 @@ public sealed class TexturePage
         return $"{Name} ({Sprites.Count} sprites)";
     }
 
+    public void LoadPalettes(string path)
+    {
+        Console.WriteLine($"\tPage {Name} is indexed! Loading palettes...");
+        var files = Directory.GetFiles(path).Select(Path.GetFileName).ToArray();
+        Array.Sort(files);
+
+        var names = files.Where(file => file.StartsWith(Name)).ToList();
+
+        Palettes = new Image<Rgba32>[names.Count];
+
+        for (var i = 0; i < names.Count; i++)
+        {
+            Palettes[i] = Image.Load<Rgba32>($"{path}/{names[i]}");
+            Console.WriteLine($"\tFound palette {names[i]}. Storing as index {i}.");
+        }
+    }
+
     public void WriteToFolder(string path)
     {
         var folder = $"{path}/{Name}";
@@ -101,6 +122,8 @@ public sealed class TexturePage
         
         Directory.CreateDirectory(folder);
         
+        File.WriteAllText($"{folder}/PageOptions.json", Options.ToJson());
+
         foreach (var sprite in Sprites.Values)
         {
             sprite.WriteToDirectory(folder);

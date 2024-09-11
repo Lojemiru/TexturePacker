@@ -18,9 +18,14 @@ public static class Unpacker
                 continue;
 
             var page = TexturePage.Load(file.DirectoryName, file.Name.Replace(".json", ""));
-            
+
             Console.WriteLine($"Unpacking page {page}");
             
+            if (page.Options.PackIndexed)
+            {
+                page.LoadPalettes($"{input.FullName}/palettes");
+            }
+
             page.WriteToFolder(output.FullName);
             count++;
         }

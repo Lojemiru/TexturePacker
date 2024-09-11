@@ -1,4 +1,7 @@
+using System.Globalization;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using TexturePacker.Models;
 
 namespace TexturePacker;
 
@@ -23,4 +26,20 @@ public class PageOptions
         var mode = PackIndexed ? "Indexed Mode" : "Normal Mode"; 
         return $"[{mode}; page size {Size}]";
     }
+    
+    #region Templated JSON nonsense
+
+    private static readonly JsonSerializerSettings Settings = new JsonSerializerSettings
+    {
+        MetadataPropertyHandling = MetadataPropertyHandling.Ignore,
+        DateParseHandling = DateParseHandling.None,
+        Converters =
+        {
+            new IsoDateTimeConverter { DateTimeStyles = DateTimeStyles.AssumeUniversal }
+        },
+    };
+
+    public string ToJson() => JsonConvert.SerializeObject(this);
+
+    #endregion
 }

@@ -341,7 +341,11 @@ public static class Packer
             SpriteNames.Add(sprite.Name);
         }
 
-        exportJson += "}}";
+        exportJson += "},\n\"options\":";
+
+        exportJson += options.ToJson();
+
+        exportJson += "}";
         
         // Export JSON metadata.
         File.WriteAllText(outDir + "/" + name + ".json", exportJson);

@@ -103,6 +103,7 @@ public sealed class Sprite
 
         img.Mutate(c => c.DrawImage(Atlas.Texture, fakeRectangle.ToRectangle(), PixelColorBlendingMode.Normal, PixelAlphaCompositionMode.Src, 1f));
 
+        // Adjust image position based on crop offsets.
         if (CropOffsets is not null)
         {
             var x = CropOffsets[layer][frame][0];
@@ -111,6 +112,21 @@ public sealed class Sprite
             
             copy.Mutate(c => c.DrawImage(img, new Point(x, y), PixelColorBlendingMode.Normal, PixelAlphaCompositionMode.Src, 1f));
             img = copy;
+        }
+
+        // Restore original colors.
+        if (Atlas.Options.PackIndexed && !Atlas.Options.IndexingExcludedNames.Contains(Name))
+        {
+            for (var i = 0; i < img.Height; i++)
+            {
+                for (var j = 0; j < img.Width; j++)
+                {
+                    if (img[j, i].A <= 0)
+                        continue;
+
+                    img[j, i] = Atlas.Palettes[layer][0, img[j, i].R];
+                }
+            }
         }
 
         return ImageToBytes(img);
