@@ -1,8 +1,9 @@
-using System.IO.Compression;
 using System.Text;
-using ICSharpCode.SharpZipLib.Zip.Compression;
 using ICSharpCode.SharpZipLib.Zip.Compression.Streams;
 using TexturePacker.Models;
+
+// TODO: De-indexing.
+// TODO: Copy page metadata for identical re-packing. 
 
 namespace TexturePacker;
 
@@ -18,8 +19,7 @@ public static class AsepriteGenerator
 
         // FRAMES
         
-        // Frame 1 - chunks count is layer definitions (normal and origin/attach points), cels, origin, and attach points
-        //var frame1 = WriteFrameHeader(sprite, writer, (sprite.Layers * 2) + 2 + (sprite.AttachPoints.Count * 2));
+        // Frame 1 - need to double chunk count because we have to add layer definitions and cels.
         var frame1 = WriteFrameHeader(sprite, writer, sprite.GetChunkCount(0) * 2);
         
         // First frame is special: it holds a set of layer chunks that define the layers layout.
@@ -54,7 +54,7 @@ public static class AsepriteGenerator
     private static void WriteHeader(Sprite sprite, BinaryWriter writer)
     {
         // DWORD       File size
-        // Overwritten after all other generation.
+        // Placeholder; overwritten after all other generation.
         writer.Write((uint)128);
         // WORD        Magic number (0xA5E0)
         //writer.Write(0xA5E0);
