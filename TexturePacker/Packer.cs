@@ -266,10 +266,18 @@ public static class Packer
                     var hueX = System.Drawing.Color.FromArgb(x.R, x.G, x.B).GetHue();
                     var hueY = System.Drawing.Color.FromArgb(y.R, y.G, y.B).GetHue();
 
-                    if (hueX > hueY)
-                        return 1;
+                    if (Math.Abs(hueX - hueY) > 0.0001f) 
+                        return (hueX > hueY ? 1 : -1);
 
-                    return -1;
+                    if (x.R != y.R) 
+                        return (x.R > y.R) ? 1 : -1;
+                    if (x.G != y.G) 
+                        return (x.G > y.G ? 1 : -1);
+                    if (x.B == y.B)
+                        return (x.A > y.A) ? 1 : -1;
+
+                    return (x.B > y.B) ? 1 : -1;
+
                 });
 
                 colorsDict[colorSet.Key] = colorsList;
